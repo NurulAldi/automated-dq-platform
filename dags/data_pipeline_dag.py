@@ -27,7 +27,7 @@ def send_slack_alert(context):
     exec_time_str = local_time.strftime("%H:%M:%S WIB")
 
     log_url = task_instance.log_url
-    public_url = Variable.get("PUBLIC_AIRFLOW_URL", default_var=None)
+    public_url = Variable.get("PUBLIC_AIRFLOW_URL", default=None)
     if public_url:
         public_url = public_url.rstrip("/")
         if log_url.startswith("http://localhost:8080"):
