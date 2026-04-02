@@ -1,6 +1,8 @@
 from airflow import DAG
 from airflow.sdk import Variable
 from airflow.providers.standard.operators.bash import BashOperator
+from airflow.providers.standard.operators.python import PythonOperator
+from airflow.task.trigger_rule import TriggerRule
 from datetime import timedelta
 import json
 import logging
@@ -70,6 +72,18 @@ default_args = {
     'retry_delay': timedelta(minutes=5)
 }
 
+def clean_bad_data_fn():
+    from google.cloud import bigquery
+    import logging
+    client = bigquery.Client()
+    query = """
+    DELETE FROM `automated-dq-platform.raw_data.daily_orders`
+    WHERE total_price < 0 OR total_price IS NULL
+    """
+    job = client.query(query)
+    job.result()
+    logging.info("Bad data cleaned successfully.")
+
 with DAG(
     dag_id='automated_data_quality_pipeline',
     default_args=default_args,
@@ -83,14 +97,28 @@ with DAG(
         bash_command='python /opt/airflow/ingest_data.py'
     )
 
-    task_dbt_run = BashOperator(
-        task_id='dbt_run',
-        bash_command='cd /opt/airflow/dbt_project && dbt run --profiles-dir .'
-    )
-
     task_dbt_test = BashOperator(
         task_id='dbt_test',
         bash_command='cd /opt/airflow/dbt_project && dbt test --profiles-dir .'
     )
 
-    task_ingest >> task_dbt_run >> task_dbt_test
+    task_clean_data = PythonOperator(
+        task_id='clean_bad_data',
+        python_callable=clean_bad_data_fn,
+        trigger_rule=TriggerRule.ALL_FAILED
+    )
+
+    task_dbt_run = BashOperator(
+        task_id='dbt_run',
+        bash_command='cd /opt/airflow/dbt_project && dbt run --profiles-dir .',
+        trigger_rule=TriggerRule.ONE_SUCCESS
+    )
+
+    # Workflow Branching
+    task_ingest >> task_dbt_test
+    
+    # Path A: dbt_test succeeds -> skip clean -> run dbt_run
+    task_dbt_test >> task_dbt_run
+    
+    # Path B: dbt_test fails -> run clean_data -> run dbt_run
+    task_dbt_test >> task_clean_data >> task_dbt_run
