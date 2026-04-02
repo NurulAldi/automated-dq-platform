@@ -1,7 +1,7 @@
 # Automated Data Quality Platform
 
 ## Overview
-This repository contains an end-to-end Automated Data Quality (DQ) Platform built with **Apache Airflow**, **dbt (Data Build Tool)**, and **Google BigQuery**. The project is designed to simulate a daily batch data ingestion process, transform the raw data, and automatically enforce data quality checks. If any anomalies or bad data are detected during the pipeline execution, an alert is sent directly to a Slack channel via a webhook.
+This repository contains an end-to-end Automated Data Quality (DQ) Platform built with **Apache Airflow**, **dbt (Data Build Tool)**, **Google BigQuery**, and **Looker Studio**. The project simulates a daily batch data ingestion process, enforces data quality checks, and automatically cleanses bad data upon failure. If anomalies are detected, an alert is sent directly to a Slack channel via a webhook, the corrupted data is automated wiped out, and the clean data is finally transformed and modeled for visualization in Looker Studio.
 
 ## Architecture & Technologies
 - **Apache Airflow (v3.1.8+)**: Orchestrates the daily workflow, managing task dependencies and scheduling.
@@ -10,12 +10,15 @@ This repository contains an end-to-end Automated Data Quality (DQ) Platform buil
 - **Pandas**: Used inside the ingestion script to generate, manipulate, and load dummy datasets directly into BigQuery.
 - **Docker & Docker Compose**: Containerizes the entire Airflow stack (Webserver, Scheduler, Celery Workers, Redis, Postgres) for reproducible local development.
 - **Slack Webhook**: Provides real-time alerting for data quality check failures.
+- **Looker Studio**: Connects to the final transformed dbt models (e.g., `stg.orders`) to visualize the verified, clean data (1000 valid rows).
 
 ## Workflow Description
-1. **Data Ingestion (`ingest_raw_data`)**: A python script (`ingest_data.py`) runs via an Airflow `BashOperator`. It generates 1000 rows of valid daily order records alongside 10 deliberately corrupted records (e.g., negative prices, null values) and loads them into a BigQuery dataset (`raw_data.daily_orders`).
-2. **Data Transformation (`dbt_run`)**: dbt connects to BigQuery to select the raw data, perform transformations, and materialize it as views/tables.
-3. **Data Quality Checks (`dbt_test`)**: dbt runs predefined validation tests (schema tests, custom data tests) to catch anomalies such as nulls or negative revenue.
-4. **Automated Alerting (`on_failure_callback`)**: If `dbt_test` fails, Airflow immediately triggers a callback function (`send_slack_alert`). This function captures the DAG run details, execution time, failed task ID, and log URL, pushing a formatted alert directly to a configured Slack channel.
+1. **Data Ingestion (`ingest_raw_data`)**: A python script (`ingest_data.py`) runs via an Airflow `BashOperator`. It generates 1000 rows of valid daily order records alongside 10 deliberately corrupted records (e.g., negative prices, null values) and loads them into a BigQuery dataset (`raw_data.daily_orders`) for a total of 1010 rows.
+2. **Data Quality Checks (`dbt_test`)**: dbt first runs predefined validation tests (schema tests, custom data tests) to catch anomalies such as nulls or negative revenue in the raw data.
+3. **Automated Alerting (`on_failure_callback`)**: If `dbt_test` fails, Airflow immediately triggers an automated alert to a configured Slack channel reporting the incident.
+4. **Automated Data Cleansing (`clean_bad_data`)**: If the `dbt_test` fails due to bad data, this automated task is triggered to clean the raw data in BigQuery by executing a query to delete records with negative or null values.
+5. **Data Transformation (`dbt_run`)**: After the data passes the quality checks (or is automatically cleansed by `clean_bad_data`), dbt performs transformations to model the data into its final state (e.g., `stg.orders`).
+6. **Data Visualization (Looker Studio)**: Looker Studio is connected to the transformed dbt dataset (`stg.orders`) to seamlessly visualize the final 1000 rows of filtered, clean data.
 
 ## Project Structure
 ```text
