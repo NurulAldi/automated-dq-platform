@@ -1,0 +1,6 @@
+apache-airflow==3.1.8
+apache-airflow-providers-slack
+dbt-core
+dbt-bigquery
+pandas
+google-cloud-bigquery
