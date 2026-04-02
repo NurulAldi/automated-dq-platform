@@ -43,6 +43,7 @@ This repository contains an end-to-end Automated Data Quality (DQ) Platform buil
     ```env
     AIRFLOW_UID=50000
     SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+    PUBLIC_AIRFLOW_URL=http://airflow.your-company.com:8080
     ```
 
 ### 3. Running the Platform
@@ -51,3 +52,8 @@ Simply bring up the Airflow cluster using Docker Compose:
 docker-compose up -d
 ```
 Access the Airflow Web UI at `http://localhost:8080` (default credentials: `airflow` / `airflow`). Enable the `automated_data_quality_pipeline` DAG to observe the end-to-end ingestion, dbt transformations, and automated Slack alerts upon failure.
+
+### 4. Optional: Public Log URL for Slack Alerts
+By default, the Slack alerts will generate log URLs pointing to `http://localhost:8080`. If your Airflow server is running remotely (e.g., in an EC2 instance or remote VM) and you want your team to access the logs over the internet, you can easily configure it via the `.env` file.
+
+Simply set the `PUBLIC_AIRFLOW_URL` in your `.env` file to your instance's public IP or domain (e.g., `PUBLIC_AIRFLOW_URL=http://192.168.1.100:8080`). The DAG will automatically replace the `localhost` section in the Slack alert with your public URL. If it's left blank or missing, it will safely fallback to the local host.

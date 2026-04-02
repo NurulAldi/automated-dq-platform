@@ -19,30 +19,17 @@ def send_slack_alert(context):
         return
 
     dag_id = task_instance.dag_id
-    dag_run = context.get('dag_run')
-    exec_date = (
-        context.get('logical_date')
-        or getattr(dag_run, 'logical_date', None)
-        or context.get('execution_date')
-        or getattr(task_instance, 'start_date', None)
-        or context.get('ts')
-    )
-    if hasattr(exec_date, 'strftime'):
-        exec_date_str = exec_date.strftime("%Y-%m-%d")
-        exec_time_str = exec_date.strftime("%H:%M:%S")
-    else:
-        raw_ts = str(exec_date)
-        if 'T' in raw_ts:
-            date_part, time_part = raw_ts.split('T', 1)
-        elif ' ' in raw_ts:
-            date_part, time_part = raw_ts.split(' ', 1)
-        else:
-            date_part, time_part = raw_ts, ""
+    
+    local_time = pendulum.now("Asia/Jakarta")
+    exec_date_str = local_time.strftime("%Y-%m-%d")
+    exec_time_str = local_time.strftime("%H:%M:%S WIB")
 
-        time_part = time_part.split('+', 1)[0].split('Z', 1)[0].strip()
-        exec_date_str = date_part.strip()
-        exec_time_str = time_part.strip() or "unknown"
     log_url = task_instance.log_url
+    public_url = Variable.get("PUBLIC_AIRFLOW_URL", default_var=None)
+    if public_url:
+        public_url = public_url.rstrip("/")
+        if log_url.startswith("http://localhost:8080"):
+            log_url = log_url.replace("http://localhost:8080", public_url)
 
     msg = f"""
     *DATA QUALITY ALERT*
