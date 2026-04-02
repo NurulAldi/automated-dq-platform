@@ -1,0 +1,19 @@
+version: 2
+
+sources:
+  - name: raw_data
+    database: "{{ target.project }}" # automatically fetch GCP Project ID
+    schema: raw_data
+    tables:
+      - name: daily_orders
+        columns:
+          - name: order_id
+            tests:
+              - unique
+          - name: total_price
+            tests:
+              - not_null
+              - dbt_utils.expression_is_true:
+                  arguments:
+                    expression: ">= 0"
+          

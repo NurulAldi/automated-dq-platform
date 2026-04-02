@@ -1,0 +1,11 @@
+my_data_platform:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: service-account
+      project: "automated-dq-platform"
+      dataset: analytics
+      threads: 4
+      keyfile: /opt/airflow/config/gcp-key.json 
+      location: asia-southeast2
