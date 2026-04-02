@@ -44,7 +44,6 @@ This repository contains an end-to-end Automated Data Quality (DQ) Platform buil
     AIRFLOW_UID=50000
     SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
     ```
-    *Note: The `.env` file is heavily guarded by `.gitignore` to prevent credentials leakage.*
 
 ### 3. Running the Platform
 Simply bring up the Airflow cluster using Docker Compose:

@@ -16,7 +16,7 @@ my_data_platform/target/
 my_data_platform/dbt_packages/
 my_data_platform/logs/
 
-config/gcp-key.json
+config
 .env
 *.env
 
